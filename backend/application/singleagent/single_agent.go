@@ -24,7 +24,6 @@ import (
 
 	shortcutCmd "github.com/coze-dev/coze-studio/backend/domain/shortcutcmd/service"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/slices"
-	"github.com/coze-dev/coze-studio/backend/types/consts"
 
 	"github.com/bytedance/sonic"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -521,12 +520,6 @@ func (s *SingleAgentApplicationService) GetAgentDraftDisplayInfo(ctx context.Con
 }
 
 func (s *SingleAgentApplicationService) ValidateAgentDraftAccess(ctx context.Context, agentID int64) (*entity.SingleAgent, error) {
-	uid := ctxutil.GetUIDFromCtx(ctx)
-	if uid == nil {
-		uid = ptr.Of(int64(888))
-		// return nil, errorx.New(errno.ErrAgentPermissionCode, errorx.KV("msg", "session uid not found"))
-	}
-
 	do, err := s.DomainSVC.GetSingleAgentDraft(ctx, agentID)
 	if err != nil {
 		return nil, err
@@ -536,16 +529,7 @@ func (s *SingleAgentApplicationService) ValidateAgentDraftAccess(ctx context.Con
 		return nil, errorx.New(errno.ErrAgentPermissionCode, errorx.KVf("msg", "No agent draft(%d) found for the given agent ID", agentID))
 	}
 
-	if do.SpaceID == consts.TemplateSpaceID { // duplicate template, not need check uid permission
-		return do, nil
-	}
-
-	if do.CreatorID != *uid {
-		logs.CtxErrorf(ctx, "user(%d) is not the creator(%d) of the agent draft", *uid, do.CreatorID)
-
-		return do, errorx.New(errno.ErrAgentPermissionCode, errorx.KV("detail", "you are not the agent owner"))
-	}
-
+	// 所有空间都不进行权限校验，直接返回
 	return do, nil
 }
 

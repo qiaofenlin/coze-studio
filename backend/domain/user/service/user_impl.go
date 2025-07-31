@@ -289,27 +289,35 @@ func (u *userImpl) Create(ctx context.Context, req *CreateUserRequest) (user *us
 
 	spaceID := req.SpaceID
 	if spaceID <= 0 {
-		var sid int64
-		sid, err = u.IDGen.GenID(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("gen space_id failed: %w", err)
-		}
+		// 尝试获取第一个space记录
+		firstSpace, err := u.SpaceRepo.GetFirstSpace(ctx)
+		if err == nil && firstSpace != nil {
+			// 如果space表中有记录，使用第一行数据的id
+			spaceID = firstSpace.ID
+		} else {
+			// 如果space表中没有记录，新建一条记录
+			var sid int64
+			sid, err = u.IDGen.GenID(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("gen space_id failed: %w", err)
+			}
 
-		err = u.SpaceRepo.CreateSpace(ctx, &model.Space{
-			ID:          sid,
-			Name:        "Personal Space",
-			Description: "This is your personal space",
-			IconURI:     uploadEntity.EnterpriseIconURI,
-			OwnerID:     userID,
-			CreatorID:   userID,
-			CreatedAt:   now,
-			UpdatedAt:   now,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("create personal space failed: %w", err)
-		}
+			err = u.SpaceRepo.CreateSpace(ctx, &model.Space{
+				ID:          sid,
+				Name:        "Public Space",
+				Description: "This is a public space for all users",
+				IconURI:     uploadEntity.EnterpriseIconURI,
+				OwnerID:     userID,
+				CreatorID:   userID,
+				CreatedAt:   now,
+				UpdatedAt:   now,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("create public space failed: %w", err)
+			}
 
-		spaceID = sid
+			spaceID = sid
+		}
 	}
 
 	newUser := &model.User{
@@ -334,7 +342,7 @@ func (u *userImpl) Create(ctx context.Context, req *CreateUserRequest) (user *us
 	err = u.SpaceRepo.AddSpaceUser(ctx, &model.SpaceUser{
 		SpaceID:   spaceID,
 		UserID:    userID,
-		RoleType:  1,
+		RoleType:  3, // 设置为member角色
 		CreatedAt: now,
 		UpdatedAt: now,
 	})

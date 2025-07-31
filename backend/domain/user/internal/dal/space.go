@@ -44,3 +44,8 @@ func (dao *SpaceDAO) GetSpaceByIDs(ctx context.Context, spaceIDs []int64) ([]*mo
 		dao.query.Space.ID.In(spaceIDs...),
 	).Find()
 }
+
+// GetFirstSpace 获取第一个space记录
+func (dao *SpaceDAO) GetFirstSpace(ctx context.Context) (*model.Space, error) {
+	return dao.query.Space.WithContext(ctx).First()
+}
